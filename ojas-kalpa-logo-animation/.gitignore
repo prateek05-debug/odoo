@@ -1,3 +1,8 @@
 node_modules/
 build/
 out/frames/
+
+# the Odoo root .gitignore excludes these; this project needs them
+!package.json
+!package-lock.json
+!tsconfig.json

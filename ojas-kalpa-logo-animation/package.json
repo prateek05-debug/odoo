@@ -1,0 +1,22 @@
+{
+  "name": "ojas-kalpa-logo-animation",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Animated logo intros (full lockup + monogram) for Ojas Kalpa, built with Remotion",
+  "scripts": {
+    "layers": "python3 -I scripts/extract_layers.py assets/source-logo.webp public/layers",
+    "audio": "python3 -I scripts/make_audio.py src/timeline.json public/audio",
+    "studio": "remotion studio",
+    "render": "bash scripts/render_all.sh"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.535",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "remotion": "4.0.535"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.8",
+    "typescript": "5.8.3"
+  }
+}
