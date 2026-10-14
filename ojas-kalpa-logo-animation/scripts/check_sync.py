@@ -35,12 +35,14 @@ lags = np.concatenate([np.arange(0, n), np.arange(-n, 0)])
 lag = lags[int(np.argmax(xc))]
 print(f'global audio offset vs source: {lag / SR * 1000:+.2f} ms')
 
-events = [(f'dosha {i + 1} lands', hops[0]) for i, hops in enumerate(I['doshaHops'])]
-events += [('ojas merge', I['merge']), ('splash at base', I['baseLand']), ('head lands', I['headLand'])]
-events += [(f'ray {k + 1}', I['rayStart'] + k * I['rayStep']) for k in range(11)]
+events = [('seed bursts', I['burst'])]
+events += [(f'leaves tier {k + 1}', at) for k, at in enumerate(I['leaves'])]
+events += [('head lands', I['headLand']), ('sunrise', I['sunrise'])]
 if variant == 'full':
-    events += [(f'letter {k + 1}', at) for k, at in enumerate(E['letterLands'])]
-events += [('final hit', E['hit'])]
+    events += [(f'OJAS letter {k + 1}', at) for k, at in enumerate(E['ojasLetters'])]
+    events += [(f'KALPA letter {k + 1}', at) for k, at in enumerate(E['kalpaLetters'])]
+    events += [(f'tagline word {k + 1}', at) for k, at in enumerate(E['taglineWords'])]
+    events += [('bud blooms (hit)', E['hit'])]
 
 hp = np.diff(vid, prepend=0)  # emphasise transients over drones
 rms = lambda a, b: np.sqrt(np.mean(hp[int(a * SR):int(b * SR)] ** 2)) + 1e-9
