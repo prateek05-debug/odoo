@@ -1,10 +1,10 @@
 import React from 'react';
 import {Composition} from 'remotion';
 import {Intro, type IntroProps} from './Intro';
-import {FPS, TIMING} from './timing';
+import {ENDING, FPS} from './timing';
 
-const full = Math.round(TIMING.full.duration * FPS);
-const mono = Math.round(TIMING.monogram.duration * FPS);
+const full = Math.round(ENDING.full.duration * FPS);
+const mono = Math.round(ENDING.monogram.duration * FPS);
 
 const comps: {id: string; w: number; h: number; frames: number; props: IntroProps}[] = [
 	{id: 'Full-16x9', w: 1920, h: 1080, frames: full, props: {variant: 'full', transparent: false, fill: 0.8}},

@@ -1,8 +1,9 @@
 import React from 'react';
-import {Img, spring, staticFile} from 'remotion';
+import {Img, staticFile} from 'remotion';
 import type {CSSProperties} from 'react';
-import {LOGO, clamp01, easeInOut, layer, prog, wipe} from '../anim';
-import type {Timing} from '../timing';
+import {clamp01, easeInOut, layer} from '../anim';
+import {BASE, BASELINE, HEAD, LETTERS, ojasPos, springAt, squashAfter} from '../kinetic';
+import {FULL, INTRO, type Variant} from '../timing';
 
 const Layer: React.FC<{name: string; style?: CSSProperties}> = ({name, style}) => {
 	const L = layer(name);
@@ -13,148 +14,143 @@ const Layer: React.FC<{name: string; style?: CSSProperties}> = ({name, style}) =
 	);
 };
 
-const BASE = LOGO.emblemBase;
-const HEAD = LOGO.head;
+const easeOutCubic = (u: number) => 1 - (1 - clamp01(u)) ** 3;
 
-/** Leaves unfold from the base of the emblem like a lotus opening. */
-const Leaf: React.FC<{name: string; t: number; start: number}> = ({name, t, start}) => {
+/** Hard-edged-ish directional reveal (used for fast "whip" draws). */
+const reveal = (dir: 'to right' | 'to left' | 'to top', p: number, feather = 0.06): CSSProperties => {
+	if (p >= 1) return {};
+	const edge = p * (1 + feather) * 100;
+	const g = `linear-gradient(${dir}, #000 ${edge - feather * 100}%, transparent ${edge}%)`;
+	return {maskImage: g, WebkitMaskImage: g};
+};
+
+/** Leaves burst open around the base when the ojas drop lands. */
+const Leaf: React.FC<{name: string; t: number; at: number}> = ({name, t, at}) => {
 	const L = layer(name);
 	const left = name.includes('left');
-	const p = prog(t, start, 1.0);
+	const s = springAt(t, at, {damping: 13, stiffness: 180, mass: 0.7});
+	if (s <= 0) return null;
 	return (
 		<Layer
 			name={name}
 			style={{
-				transformOrigin: `${BASE.x - L.x}px ${BASE.y - 5 - L.y}px`,
-				transform: `rotate(${(1 - p) * (left ? 42 : -42)}deg) scale(${0.3 + 0.7 * p})`,
-				opacity: clamp01((t - start) / 0.3),
+				transformOrigin: `${BASE.x - L.x}px ${BASE.y + 10 - L.y}px`,
+				transform: `rotate(${(1 - s) * (left ? 70 : -70)}deg) scale(${s})`,
 			}}
 		/>
 	);
 };
 
-/** Sun rays shoot outward from the figure's head, centre ray first. */
-const Ray: React.FC<{index: number; t: number; T: Timing}> = ({index, t, T}) => {
+/** Sun rays pop out one after another, left to right, each on its own glockenspiel note. */
+const Ray: React.FC<{index: number; t: number}> = ({index, t}) => {
 	const name = `ray-${String(index).padStart(2, '0')}`;
 	const L = layer(name);
-	const start = T.rays + Math.abs(index - 5) * T.rayStep + 0.08;
-	const p = prog(t, start, 0.6);
-	// origin = point of the ray's box closest to the head, so it grows outward
+	const at = INTRO.rayStart + index * INTRO.rayStep;
+	const s = springAt(t, at, {damping: 9, stiffness: 210, mass: 0.6});
+	if (s <= 0) return null;
 	const ox = Math.min(Math.max(HEAD.x, L.x), L.x + L.w) - L.x;
 	const oy = Math.min(Math.max(HEAD.y, L.y), L.y + L.h) - L.y;
-	const cx = L.x + L.w / 2 - HEAD.x;
-	const cy = L.y + L.h / 2 - HEAD.y;
-	const len = Math.hypot(cx, cy);
-	const push = (1 - p) * -40;
-	return (
-		<Layer
-			name={name}
-			style={{
-				transformOrigin: `${ox}px ${oy}px`,
-				transform: `translate(${(cx / len) * push}px, ${(cy / len) * push}px) scale(${p})`,
-				opacity: clamp01((t - start) / 0.15),
-			}}
-		/>
-	);
+	return <Layer name={name} style={{transformOrigin: `${ox}px ${oy}px`, transform: `scale(${s})`}} />;
 };
 
-const LETTERS = ['O', 'J', 'A1', 'S', 'K', 'A2', 'L', 'P', 'A3'];
-const WORD_CX = (596 + 1616) / 2;
-
-/** Wordmark letters track in: they converge, rise and come into focus one by one. */
-const Letter: React.FC<{name: string; i: number; t: number; T: Timing}> = ({name, i, t, T}) => {
+/** A letter sprouts from the baseline the moment the spark touches down. */
+const Letter: React.FC<{name: string; t: number; at: number}> = ({name, t, at}) => {
 	const L = layer(`letter-${name}`);
-	const start = (T.letters ?? 0) + i * (T.letterStep ?? 0.07);
-	const p = prog(t, start, 1.0);
-	const dx = (L.x + L.w / 2 - WORD_CX) * 0.22 * (1 - p);
+	const s = springAt(t, at, {damping: 9, stiffness: 240, mass: 0.6});
+	if (s <= 0) return null;
 	return (
 		<Layer
 			name={`letter-${name}`}
 			style={{
-				transform: `translate(${dx}px, ${(1 - p) * 34}px)`,
-				filter: p < 1 ? `blur(${(1 - p) * 14}px)` : undefined,
-				opacity: clamp01((t - start) / 0.4),
+				transformOrigin: `${L.w / 2}px ${BASELINE - L.y}px`,
+				transform: `scale(${0.75 + 0.25 * s}, ${s})`,
 			}}
 		/>
 	);
 };
 
-export const Logo: React.FC<{t: number; T: Timing; fps: number; frame: number; variant: 'full' | 'monogram'}> = ({
-	t,
-	T,
-	fps,
-	frame,
-	variant,
-}) => {
-	const [l0, l1, l2] = T.leaves;
-	const fig = prog(t, T.figure, 0.9);
-	const headScale = spring({frame: frame - Math.round(T.head * fps), fps, config: {damping: 14, mass: 0.7}});
-	const swirl = prog(t, T.swirls, 1.2, easeInOut);
-	const full = variant === 'full';
+export const Logo: React.FC<{t: number; variant: Variant}> = ({t, variant}) => {
+	const {baseLand, headLand, leaves} = INTRO;
+
+	// figure grows upward behind the rising drop
+	const body = layer('figure-body');
+	const dropY = ojasPos(t)?.y ?? (t > headLand ? HEAD.y - 40 : body.y + body.h + 10);
+	const grow = t < baseLand ? 0 : clamp01((body.y + body.h - dropY + 12) / body.h);
+	const swirl = easeOutCubic((t - baseLand) / 0.4);
+	const headSq = squashAfter(t, headLand, 0.35);
 
 	return (
 		<>
-			<div style={{position: 'absolute', inset: 0, ...wipe('to left', swirl)}}>
-				<Layer name="swirl-left" />
-			</div>
-			<div style={{position: 'absolute', inset: 0, ...wipe('to right', swirl)}}>
-				<Layer name="swirl-right" />
-			</div>
-			<Leaf name="leaf-left-outer" t={t} start={l2} />
-			<Leaf name="leaf-right-outer" t={t} start={l2} />
-			<Leaf name="leaf-left-upper" t={t} start={l1} />
-			<Leaf name="leaf-right-upper" t={t} start={l1} />
-			<Leaf name="leaf-left-lower" t={t} start={l0} />
-			<Leaf name="leaf-right-lower" t={t} start={l0} />
-			<Layer
-				name="figure-body"
-				style={{transform: `translateY(${(1 - fig) * 80}px)`, ...wipe('to top', fig, 0.25)}}
-			/>
-			<Layer
-				name="figure-head"
-				style={{transform: `scale(${headScale})`, opacity: clamp01(headScale * 3)}}
-			/>
+			{swirl > 0 ? (
+				<>
+					<Layer name="swirl-left" style={reveal('to left', swirl, 0.15)} />
+					<Layer name="swirl-right" style={reveal('to right', swirl, 0.15)} />
+				</>
+			) : null}
+			<Leaf name="leaf-left-outer" t={t} at={leaves[2]} />
+			<Leaf name="leaf-right-outer" t={t} at={leaves[2]} />
+			<Leaf name="leaf-left-upper" t={t} at={leaves[1]} />
+			<Leaf name="leaf-right-upper" t={t} at={leaves[1]} />
+			<Leaf name="leaf-left-lower" t={t} at={leaves[0]} />
+			<Leaf name="leaf-right-lower" t={t} at={leaves[0]} />
+			{grow > 0 ? <Layer name="figure-body" style={reveal('to top', grow, 0.05)} /> : null}
+			{t >= headLand ? (
+				<Layer
+					name="figure-head"
+					style={{
+						transformOrigin: '50% 100%',
+						transform: `scale(${1 + headSq}, ${1 - headSq})`,
+					}}
+				/>
+			) : null}
 			{Array.from({length: 11}, (_, i) => (
-				<Ray key={i} index={i} t={t} T={T} />
+				<Ray key={i} index={i} t={t} />
 			))}
-			{full ? <Lockup t={t} T={T} fps={fps} frame={frame} /> : null}
+			{variant === 'full' ? <Lockup t={t} /> : null}
 		</>
 	);
 };
 
-const Lockup: React.FC<{t: number; T: Timing; fps: number; frame: number}> = ({t, T, fps, frame}) => {
-	const tag = T.tagline ?? 0;
-	const orn = prog(t, tag, 0.9, easeInOut);
-	const w1 = prog(t, tag + 0.1, 0.7, easeInOut);
-	const w2 = prog(t, tag + 0.35, 0.9, easeInOut);
-	const fl = prog(t, T.flourish ?? 0, 1.0, easeInOut);
-	const bud = spring({frame: frame - Math.round((T.hit - 0.1) * fps), fps, config: {damping: 13, mass: 0.6}});
+const Lockup: React.FC<{t: number}> = ({t}) => {
+	const hit = FULL.hit;
+	const bud = springAt(t, hit, {damping: 8, stiffness: 220, mass: 0.6});
+	const whip = easeOutCubic((t - hit) / 0.38);
+	const orn = easeOutCubic((t - hit - 0.1) / 0.4);
 	const bL = layer('flourish-bud');
+	const word = (at: number) => springAt(t, at, {damping: 10, stiffness: 200, mass: 0.6});
+	const w1 = word(hit + 0.05);
+	const w2 = word(hit + 0.1);
 	return (
 		<>
 			{LETTERS.map((n, i) => (
-				<Letter key={n} name={n} i={i} t={t} T={T} />
+				<Letter key={n} name={n} t={t} at={FULL.letterLands[i]} />
 			))}
-			<Layer name="ornament-left" style={wipe('to left', orn)} />
-			<Layer name="ornament-right" style={wipe('to right', orn)} />
-			<Layer
-				name="tagline-word1"
-				style={{...wipe('to right', w1), transform: `translateY(${(1 - w1) * 10}px)`}}
-			/>
-			<Layer
-				name="tagline-word2"
-				style={{...wipe('to right', w2), transform: `translateY(${(1 - w2) * 10}px)`}}
-			/>
-			<Layer name="flourish-left" style={wipe('to left', fl)} />
-			<Layer name="flourish-right" style={wipe('to right', fl)} />
-			<Layer
-				name="flourish-bud"
-				style={{
-					transformOrigin: `${bL.w / 2}px ${bL.h - 8}px`,
-					transform: `scale(${bud})`,
-					opacity: clamp01(bud * 3),
-				}}
-			/>
+			{whip > 0 ? (
+				<>
+					<Layer name="flourish-left" style={reveal('to left', whip, 0.12)} />
+					<Layer name="flourish-right" style={reveal('to right', whip, 0.12)} />
+					<Layer name="ornament-left" style={reveal('to left', orn, 0.12)} />
+					<Layer name="ornament-right" style={reveal('to right', orn, 0.12)} />
+				</>
+			) : null}
+			{w1 > 0 ? (
+				<Layer
+					name="tagline-word1"
+					style={{transformOrigin: '50% 100%', transform: `scale(${0.6 + 0.4 * w1}, ${w1})`}}
+				/>
+			) : null}
+			{w2 > 0 ? (
+				<Layer
+					name="tagline-word2"
+					style={{transformOrigin: '50% 100%', transform: `scale(${0.6 + 0.4 * w2}, ${w2})`}}
+				/>
+			) : null}
+			{bud > 0 ? (
+				<Layer
+					name="flourish-bud"
+					style={{transformOrigin: `${bL.w / 2}px ${bL.h - 8}px`, transform: `scale(${bud})`}}
+				/>
+			) : null}
 		</>
 	);
 };

@@ -1,0 +1,52 @@
+== full (out/ojas-kalpa-full-intro-1080p.mp4)
+global audio offset vs source: +0.00 ms
+dosha 1 lands    frame  15 ( 0.25s)  level jump +30.7 dB
+dosha 2 lands    frame  30 ( 0.50s)  level jump +21.5 dB
+dosha 3 lands    frame  45 ( 0.75s)  level jump +12.6 dB
+ojas merge       frame  90 ( 1.50s)  level jump +15.0 dB
+splash at base   frame 120 ( 2.00s)  level jump  +4.1 dB
+head lands       frame 150 ( 2.50s)  level jump +17.6 dB
+ray 1            frame 150 ( 2.50s)  level jump +17.6 dB
+ray 2            frame 153 ( 2.55s)  level jump  +1.5 dB
+ray 3            frame 156 ( 2.60s)  level jump  +2.3 dB
+ray 4            frame 159 ( 2.65s)  level jump  +3.4 dB
+ray 5            frame 162 ( 2.70s)  level jump  +3.2 dB
+ray 6            frame 165 ( 2.75s)  level jump  +2.6 dB
+ray 7            frame 168 ( 2.80s)  level jump  +4.2 dB
+ray 8            frame 171 ( 2.85s)  level jump  +3.4 dB
+ray 9            frame 174 ( 2.90s)  level jump  +3.5 dB
+ray 10           frame 177 ( 2.95s)  level jump  +3.4 dB
+ray 11           frame 180 ( 3.00s)  level jump  +3.1 dB
+letter 1         frame 195 ( 3.25s)  level jump  +9.0 dB
+letter 2         frame 210 ( 3.50s)  level jump +17.5 dB
+letter 3         frame 225 ( 3.75s)  level jump +20.8 dB
+letter 4         frame 240 ( 4.00s)  level jump +19.6 dB
+letter 5         frame 255 ( 4.25s)  level jump +21.4 dB
+letter 6         frame 270 ( 4.50s)  level jump +14.8 dB
+letter 7         frame 285 ( 4.75s)  level jump +20.1 dB
+letter 8         frame 300 ( 5.00s)  level jump +21.7 dB
+letter 9         frame 315 ( 5.25s)  level jump +19.9 dB
+final hit        frame 330 ( 5.50s)  level jump +16.8 dB
+(one frame at 60 fps = 16.7 ms)
+
+== monogram (out/ojas-kalpa-monogram-1080x1080.mp4)
+global audio offset vs source: +0.00 ms
+dosha 1 lands    frame  15 ( 0.25s)  level jump +30.9 dB
+dosha 2 lands    frame  30 ( 0.50s)  level jump +21.5 dB
+dosha 3 lands    frame  45 ( 0.75s)  level jump +16.3 dB
+ojas merge       frame  90 ( 1.50s)  level jump +13.8 dB
+splash at base   frame 120 ( 2.00s)  level jump  +4.3 dB
+head lands       frame 150 ( 2.50s)  level jump +15.9 dB
+ray 1            frame 150 ( 2.50s)  level jump +15.9 dB
+ray 2            frame 153 ( 2.55s)  level jump  +1.5 dB
+ray 3            frame 156 ( 2.60s)  level jump  +2.3 dB
+ray 4            frame 159 ( 2.65s)  level jump  +3.8 dB
+ray 5            frame 162 ( 2.70s)  level jump  +3.5 dB
+ray 6            frame 165 ( 2.75s)  level jump  +3.0 dB
+ray 7            frame 168 ( 2.80s)  level jump  +3.7 dB
+ray 8            frame 171 ( 2.85s)  level jump  +3.7 dB
+ray 9            frame 174 ( 2.90s)  level jump  +3.3 dB
+ray 10           frame 177 ( 2.95s)  level jump  +3.6 dB
+ray 11           frame 180 ( 3.00s)  level jump  +3.6 dB
+final hit        frame 195 ( 3.25s)  level jump +10.2 dB
+(one frame at 60 fps = 16.7 ms)

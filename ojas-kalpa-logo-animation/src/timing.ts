@@ -1,27 +1,27 @@
 import timeline from './timeline.json';
 
-/** Key moments in seconds. Shared with scripts/make_audio.py so sound and picture stay in sync. */
-export type Timing = {
-	duration: number;
-	seed: number;
+export const FPS = timeline.fps;
+export const BPM = timeline.bpm;
+
+/** Shared opening: doshas -> ojas -> leaves -> figure -> rays. Seconds. */
+export const INTRO = timeline.intro as {
+	doshaHops: number[][];
+	orbitEnd: number;
+	orbitTurns: number;
+	merge: number;
+	fallStart: number;
+	baseLand: number;
 	leaves: [number, number, number];
-	swirls: number;
-	figure: number;
-	head: number;
-	rays: number;
+	headLand: number;
+	rayStart: number;
 	rayStep: number;
-	letters?: number;
-	letterStep?: number;
-	tagline?: number;
-	flourish?: number;
-	hit: number;
-	grooveStart: number;
-	grooveEnd: number;
-	fadeOut: number;
 };
 
-export const FPS = timeline.fps;
-export const TIMING = {
-	full: timeline.full as Timing,
-	monogram: timeline.monogram as Timing,
+export const MONO = timeline.monogram;
+export const FULL = timeline.full;
+
+export type Variant = 'full' | 'monogram';
+export const ENDING = {
+	monogram: {hit: MONO.hit, fadeOut: MONO.fadeOut, duration: MONO.duration},
+	full: {hit: FULL.hit, fadeOut: FULL.fadeOut, duration: FULL.duration},
 };

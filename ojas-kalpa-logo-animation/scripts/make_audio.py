@@ -5,6 +5,8 @@ Palette (Ayurveda / Indian-classical feel, no voice):
   * tanpura-style drone in D (Sa-Pa)          * tabla-style groove (dayan "na/tin", bayan "ge")
   * airy whooshes for leaves and swirls        * glockenspiel arpeggio for the sun rays
   * singing bowl + sub boom + bell chord on the logo hit, glitter tail
+  * kinetic sync: every on-screen contact (dosha bounce, merge, splash, leaf pop, head,
+    each ray, each letter) has its own sound starting on that exact timestamp
 
 Usage: python3 -I scripts/make_audio.py src/timeline.json public/audio
 """
@@ -35,10 +37,11 @@ def env_ar(n, attack, release_rate):
 class Mix:
     def __init__(self, dur):
         self.dry = np.zeros((int(dur * SR) + SR * 6, 2))
+        self.bed = np.zeros_like(self.dry)  # drones, swells, risers, shakers: ducked before impacts
         self.send = np.zeros_like(self.dry)
         self.n = int(dur * SR)
 
-    def add(self, sig, at, gain=1.0, pan=0.0, verb=0.25):
+    def add(self, sig, at, gain=1.0, pan=0.0, verb=0.25, bed=False):
         if sig.ndim == 1:
             l, r = np.cos((pan + 1) * np.pi / 4), np.sin((pan + 1) * np.pi / 4)
             sig = np.stack([sig * l * 1.414, sig * r * 1.414], axis=1)
@@ -46,8 +49,19 @@ class Mix:
         if i < 0:
             sig, i = sig[-i:], 0
         j = min(i + len(sig), len(self.dry))
-        self.dry[i:j] += sig[: j - i] * gain
+        (self.bed if bed else self.dry)[i:j] += sig[: j - i] * gain
         self.send[i:j] += sig[: j - i] * gain * verb
+
+    def duck_envelope(self, impacts):
+        """Pull the bed down in the 60 ms before each impact so the hit lands with a clear edge."""
+        t = np.arange(len(self.dry)) / SR
+        g = np.ones_like(t)
+        for at, depth in impacts:
+            pre = np.clip((t - (at - 0.06)) / 0.055, 0, 1)
+            post = np.exp(-np.maximum(0, t - at) / 0.09)
+            shape = np.where(t < at, pre, post)
+            g = np.minimum(g, 1 - depth * shape)
+        return g[:, None]
 
 
 # ---------------------------------------------------------------- instruments
@@ -190,113 +204,194 @@ def impulse_response(dur=2.4):
     return ir / np.sqrt((ir ** 2).sum(axis=0))
 
 
+# ---------------------------------------------------------------- extra kinetic voices
+def pop(f=520.0, dur=0.18):
+    """Leaf 'pop': pitched blip that drops in pitch + a tiny click."""
+    t = tt(dur)
+    freq = f * (1 + 0.8 * np.exp(-t * 60))
+    out = np.sin(2 * np.pi * np.cumsum(freq) / SR) * np.exp(-t * 26)
+    out[:120] += rng.standard_normal(120) * np.exp(-np.arange(120) / 25) * 0.25
+    return out
+
+
+def bloop(f0=380.0, f1=1300.0, dur=0.16):
+    """Water-drop: fast upward sine sweep."""
+    t = tt(dur)
+    freq = f0 * (f1 / f0) ** np.clip(t / 0.05, 0, 1)
+    return np.sin(2 * np.pi * np.cumsum(freq) / SR) * np.exp(-t * 30) * np.minimum(1, t / 0.002)
+
+
+def glide(f0, f1, dur, curve):
+    """Sine whistle whose pitch follows `curve(u)` (0..1) — matches an on-screen path."""
+    t = tt(dur)
+    u = np.clip(t / dur, 0, 1)
+    freq = f0 * (f1 / f0) ** curve(u)
+    env = np.minimum(1, t / 0.03) * np.minimum(1, (dur - t) / 0.02).clip(0)
+    return np.sin(2 * np.pi * np.cumsum(freq) / SR) * env
+
+
+def marimba(f, dur=0.9):
+    t = tt(dur)
+    out = np.sin(2 * np.pi * f * t) * np.exp(-t * 6) + 0.35 * np.sin(2 * np.pi * f * 4 * t) * np.exp(-t * 22)
+    out += 0.15 * np.sin(2 * np.pi * f * 10 * t) * np.exp(-t * 60) if f * 10 < 0.45 * SR else 0
+    return out * np.minimum(1, t / 0.0015)
+
+
+def snap(dur=0.03, bright=6000):
+    """Very short, bright click that gives an impact a sharp, frame-accurate edge."""
+    t = tt(dur)
+    return filtered_noise(dur, bright, bright, 0.6, seed=int(rng.integers(1e6))) * np.exp(-t * 220)
+
+
+def mallet(f, dur=1.0):
+    """Glockenspiel note with a hard mallet attack (clearly audible even in a busy mix)."""
+    out = bell(f, dur, 1.2) * np.exp(-tt(dur) * 5)
+    out[: int(0.03 * SR)] += snap(0.03, min(9000, f * 4)) * 0.6
+    return out
+
+
+def pre(sig, impact):
+    """Return (sig, start) so that a swelling sound ENDS exactly on the impact."""
+    return sig, impact - len(sig) / SR
+
+
 # ---------------------------------------------------------------- arrangement
-def groove(mix, T, bpm, full):
-    six = 60 / bpm / 4
-    hit = T['hit']
-    kick_p = 'x.........x.....'
-    ge_p = 'x..x..x....x....'
-    na_p = '..x.x..x.x..x.x.'
-    t0, t1 = T['grooveStart'], T['grooveEnd']
-    n0 = int(np.ceil((t0 - hit) / six - 1e-6))
-    n1 = int(np.floor((t1 - hit) / six))
-    for n in range(n0, n1 + 1):
-        at = hit + n * six
-        step = n % 16
-        after = max(0, at - hit)
-        fade = np.exp(-after * 0.9)  # groove relaxes after the hit
-        if n >= -4 and n < 0:  # tabla roll ("tirakita") into the hit
-            mix.add(tabla_na(587.33 if n % 2 else 293.66, 0.3, 14), at, 0.18 + 0.06 * (n + 4), pan=0.25, verb=0.2)
-            continue
-        if kick_p[step] == 'x':
-            mix.add(kick(), at, 0.55 * fade, verb=0.08)
-        if ge_p[step] == 'x':
-            mix.add(tabla_ge(), at, 0.42 * fade, pan=-0.15, verb=0.12)
-        if na_p[step] == 'x':
-            mix.add(tabla_na(293.66, 0.4, 10 if step % 4 else 6), at, 0.2 * fade, pan=0.2, verb=0.15)
-        if step % 2:
-            mix.add(shaker(), at, 0.06 * fade, pan=0.45, verb=0.1)
+NOTE = lambda semis: 293.66 * 2 ** (semis / 12)  # relative to D4
+PENTA_STEPS = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24]  # D major pentatonic, 2 octaves
 
 
-def build(T, bpm, full):
-    mix = Mix(T['duration'])
-    dur = T['duration']
+def build(cfg, variant):
+    I, E = cfg['intro'], cfg[variant]
+    dur = E['duration']
+    mix = Mix(dur)
+    beat = 60 / cfg['bpm']
 
-    # tanpura drone cycle: Pa Sa Sa Sa(low), one pluck every 0.5 s
+    # tanpura drone bed (quiet), one pluck per beat: Pa Sa Sa Sa(low)
     notes = [A2, D3, D3, D2]
-    k = 0
-    t = 0.0
+    k, t = 0, 0.0
     while t < dur:
-        mix.add(tanpura(notes[k % 4], 3.5), t, 0.11 * min(1, (t + 0.3) / 1.2), pan=-0.3 + 0.2 * (k % 4), verb=0.3)
-        t += 0.5
+        mix.add(tanpura(notes[k % 4], 3.5), t, 0.07 * min(1, (t + 0.2) / 1.0), pan=-0.3 + 0.2 * (k % 4), verb=0.3, bed=True)
+        t += beat
         k += 1
 
-    # opening: reverse shimmer into the seed of light, airy riser into the leaves
-    rs = reverse_shimmer(1.0)
-    mix.add(rs, T['seed'] + 0.15 - len(rs) / SR, 0.5, verb=0.4)
-    mix.add(riser(T['leaves'][0] + 0.1, 300, 3500), 0, 0.12, verb=0.3)
-    mix.add(bell(PENTA[0], 2.0, 0.5), T['seed'] + 0.15, 0.22, verb=0.6)
+    # 1) three doshas drop in and bounce — each has its own tabla voice
+    voices = [
+        lambda g: tabla_na(587.33, 0.4, 9) * g,  # vata: light, high
+        lambda g: tabla_na(440.0, 0.5, 6) * g,  # pitta: bright "tin"
+        lambda g: tabla_ge(0.7) * g,  # kapha: earthy bass (+ kick below)
+    ]
+    pans = [0.0, -0.4, 0.4]
+    for i, hops in enumerate(I['doshaHops']):
+        sig, at = pre(whoosh(0.4, 2500, 600, seed=80 + i) * np.linspace(0.2, 1, int(0.4 * SR)), hops[0])
+        mix.add(sig, at, 0.1, pan=pans[i], verb=0.2, bed=True)
+        for n, h in enumerate(hops):
+            g = 0.5 ** n
+            mix.add(voices[i](1.0), h, 0.5 * g, pan=pans[i], verb=0.15)
+            if i == 2:
+                mix.add(kick(), h, 0.45 * g, verb=0.05)
 
-    # leaves unfold in pairs (left + right whoosh), swirls draw out
-    for i, lt in enumerate(T['leaves']):
-        mix.add(whoosh(0.8, 350 + 150 * i, 2200 + 400 * i, seed=20 + i), lt, 0.25, pan=-0.6, verb=0.3)
-        mix.add(whoosh(0.8, 360 + 150 * i, 2300 + 400 * i, seed=30 + i), lt + 0.03, 0.25, pan=0.6, verb=0.3)
-    mix.add(whoosh(1.3, 1500, 6000, seed=40), T['swirls'], 0.13, pan=0, verb=0.5)
+    # 2) orbit: a whirl whose tremolo follows the dots passing (3 per turn), rising into the merge
+    o0 = I['doshaHops'][2][-1]
+    od = I['orbitEnd'] - o0
+    tw = tt(od)
+    u = tw / od
+    phi = I['orbitTurns'] * 2 * np.pi * u ** 2
+    whirl = filtered_noise(od, 500, 4500, 0.4, seed=90) * (0.35 + 0.65 * (0.5 + 0.5 * np.cos(3 * phi))) * u ** 1.5
+    mix.add(whirl, o0, 0.22, verb=0.3, bed=True)
+    mix.add(glide(NOTE(0), NOTE(12), od, lambda x: x ** 2) * u ** 2, o0, 0.05, verb=0.4, bed=True)
+    rs = reverse_shimmer(0.7)
+    mix.add(rs, I['merge'] - 0.02 - len(rs) / SR, 0.45, verb=0.4, bed=True)  # 'suck' stops just before
 
-    # figure grows: rising tone + riser; head lands with a ting, kick and soft boom
-    rise = T['head'] - T['figure']
-    tr = tt(rise + 0.2)
-    gl = 293.66 * 2 ** ((7 / 12) * np.clip(tr / rise, 0, 1))
-    tone = np.sin(2 * np.pi * np.cumsum(gl) / SR) * np.minimum(1, tr / rise) ** 2 * np.exp(-np.maximum(0, tr - rise) * 20)
-    mix.add(tone, T['figure'], 0.08, verb=0.5)
-    mix.add(riser(rise, 400, 5000, seed=5), T['figure'], 0.14, verb=0.3)
-    mix.add(kick(), T['head'], 0.6, verb=0.1)
-    mix.add(bell(1174.66, 2.5), T['head'], 0.3, verb=0.5)
-    mix.add(boom(1.2) * np.exp(-tt(1.2) * 2), T['head'], 0.25, verb=0.1)
+    # 3) merge into ojas: bell chord + kick + glitter
+    m = I['merge']
+    mix.add(kick(), m, 0.55, verb=0.1)
+    mix.add(snap(0.03, 7000), m, 0.5, verb=0.2)
+    for n, st in enumerate([12, 16, 19, 24]):
+        mix.add(bell(NOTE(st), 2.2, 0.8), m + 0.004 * n, 0.12, pan=-0.3 + 0.2 * n, verb=0.6)
+    mix.add(glitter(0.6, 10, seed=21), m, 0.3, verb=0.4)
 
-    # sun rays: pentatonic glockenspiel run, spreading outward in the stereo field
-    for s in range(6):
-        at = T['rays'] + 0.08 + s * T['rayStep'] * 1.5
-        mix.add(bell(PENTA[s], 2.2), at, 0.17, pan=(-1) ** s * 0.12 * s, verb=0.55)
+    # 4) the drop falls (descending whistle ending on impact) and splashes at the base
+    fd = I['baseLand'] - I['fallStart']
+    mix.add(glide(NOTE(24), NOTE(7), fd, lambda x: x ** 2), I['fallStart'], 0.06, verb=0.3, bed=True)
+    b = I['baseLand']
+    mix.add(kick(), b, 0.75, verb=0.05)
+    mix.add(snap(0.03, 4500), b, 0.55, verb=0.15)
+    mix.add(tabla_ge(0.8), b, 0.45, verb=0.1)
+    mix.add(tabla_na(293.66, 0.4, 8), b, 0.3, verb=0.15)
+    mix.add(bloop(300, 900, 0.2), b, 0.35, verb=0.3)
+    mix.add(boom(1.0) * np.exp(-tt(1.0) * 3), b, 0.35, verb=0.1)
+    for n, lt in enumerate(I['leaves']):  # leaves burst: L/R pops on each stagger
+        mix.add(pop(NOTE(12 + 4 * n)), lt, 0.3, pan=-0.6, verb=0.25)
+        mix.add(pop(NOTE(12 + 4 * n) * 1.01), lt + 0.004, 0.3, pan=0.6, verb=0.25)
+    mix.add(whoosh(0.4, 900, 4000, seed=91), b, 0.12, verb=0.3)
 
-    # wordmark / tagline / flourish (full lockup only)
-    if full:
-        letters_dur = 8 * T['letterStep'] + 1.0
-        sweep = filtered_noise(letters_dur, 1200, 7000, 0.5, seed=50)
-        sweep *= np.sin(np.pi * tt(letters_dur) / letters_dur) ** 2
-        st = np.stack([sweep * np.linspace(1.2, 0.2, len(sweep)), sweep * np.linspace(0.2, 1.2, len(sweep))], axis=1)
-        mix.add(st, T['letters'], 0.12, verb=0.3)
-        mix.add(glitter(letters_dur, 14, seed=11), T['letters'], 0.35, verb=0.4)
-        mix.add(whoosh(0.9, 700, 3000, seed=60), T['tagline'], 0.16, pan=-0.3, verb=0.3)
-        mix.add(whoosh(1.0, 900, 4200, seed=61), T['flourish'], 0.15, pan=0.3, verb=0.4)
+    # 5) drop rises with the figure (whistle up, decelerating like the drop) and lands as the head
+    h = I['headLand']
+    rd = h - b
+    mix.add(glide(NOTE(7), NOTE(24), rd, lambda x: 1 - (1 - x) ** 2), b, 0.07, verb=0.4, bed=True)
+    mix.add(riser(rd, 400, 5000, seed=92), b, 0.1, verb=0.2, bed=True)
+    mix.add(kick(), h, 0.6, verb=0.05)
+    mix.add(snap(0.03, 6000), h, 0.4, verb=0.15)
+    mix.add(bell(NOTE(24), 1.2) * np.exp(-tt(1.2) * 2), h, 0.18, verb=0.4)
 
-    # THE HIT: sub boom + singing bowl + D major bell chord + glitter tail
-    hit = T['hit']
+    # 6) eleven rays, one glockenspiel note each, sweeping left -> right
+    for n in range(11):
+        at = I['rayStart'] + n * I['rayStep']
+        mix.add(mallet(NOTE(12 + PENTA_STEPS[n]), 0.9), at, 0.2, pan=-0.7 + 0.14 * n, verb=0.4)
+
+    # light groove from the splash to the hit: kick on every beat, shaker on 16ths
+    hit = E['hit']
+    t = b
+    while t < hit - 1e-6:
+        mix.add(kick(), t, 0.35, verb=0.05)
+        for q in range(4):
+            mix.add(shaker(), t + q * beat / 4, 0.05 if q % 2 else 0.03, pan=0.4, verb=0.1, bed=True)
+        t += beat
+
+    # 7) full lockup: spark hops letter to letter, each landing = one melody note
+    if variant == 'full':
+        mix.add(bloop(500, 1600, 0.15), E['emit'], 0.3, pan=-0.5, verb=0.3)
+        melody = [7, 9, 12, 14, 16, 14, 12, 16, 19]  # pentatonic phrase that climbs to resolve
+        lands = E['letterLands']
+        for n, at in enumerate(lands):
+            pan = -0.5 + n * 0.12
+            mix.add(marimba(NOTE(melody[n])), at, 0.28, pan=pan, verb=0.3)
+            mix.add(tabla_na(NOTE(melody[n] + 12), 0.25, 14), at, 0.12, pan=pan, verb=0.2)
+            mix.add(snap(0.025, 5000), at, 0.3, pan=pan, verb=0.1)
+        last = lands[-1]
+        mix.add(glide(NOTE(31), NOTE(12), hit - last, lambda x: x ** 1.5), last, 0.05, pan=0.2, verb=0.4, bed=True)
+        sig, at = pre(riser(hit - last, 800, 7000, seed=93), hit - 0.02)
+        mix.add(sig, at, 0.12, verb=0.3, bed=True)
+
+    # 8) THE HIT: sub boom + singing bowl + D-major bell chord + glitter tail
     mix.add(boom(), hit, 0.9, verb=0.12)
     mix.add(kick(), hit, 0.6, verb=0.1)
-    mix.add(singing_bowl(220.0, 6), hit, 0.33, verb=0.4)
-    for i, f in enumerate([587.33, 739.99, 880.0, 1174.66]):
-        mix.add(bell(f, 3.0, 0.8), hit + 0.012 * i, 0.12, pan=-0.45 + 0.3 * i, verb=0.7)
+    mix.add(snap(0.04, 5000), hit, 0.7, verb=0.3)
+    mix.add(tabla_ge(0.9), hit, 0.35, verb=0.15)
+    mix.add(singing_bowl(220.0, 6), hit, 0.3, verb=0.4)
+    for n, st in enumerate([12, 16, 19, 24]):
+        mix.add(bell(NOTE(st), 3.0, 0.8), hit + 0.006 * n, 0.12, pan=-0.45 + 0.3 * n, verb=0.7)
     crash = filtered_noise(2.5, 9000, 6000, 0.8, seed=70) * np.exp(-tt(2.5) * 2.2)
     mix.add(crash, hit, 0.07, verb=0.5)
-    mix.add(glitter(2.0, 30, seed=12), hit + 0.05, 0.4, verb=0.5)
-
-    groove(mix, T, bpm, full)
+    mix.add(glitter(1.6, 24, seed=12), hit + 0.03, 0.35, verb=0.5)
 
     # ---- master
     wet = np.stack([fftconvolve(mix.send[:, c], impulse_response()[:, c])[: len(mix.send)] for c in range(2)], axis=1)
-    out = (mix.dry + 0.55 * wet)[: mix.n]
-    # high-pass at ~28 Hz to tidy the sub, then a gentle soft clip
+    impacts = [(hops[0], 0.5) for hops in I['doshaHops']]
+    impacts += [(I['merge'], 0.75), (I['baseLand'], 0.75), (I['headLand'], 0.6), (hit, 0.8)]
+    if variant == 'full':
+        impacts += [(at, 0.4) for at in E['letterLands']]
+    duck = mix.duck_envelope(impacts)
+    out = (mix.dry + (mix.bed + 0.5 * wet) * duck)[: mix.n]
     spec = np.fft.rfft(out, axis=0)
     f = np.fft.rfftfreq(len(out), 1 / SR)
     spec *= (1 / np.sqrt(1 + (28 / np.maximum(f, 1)) ** 8))[:, None]
     out = np.fft.irfft(spec, n=len(out), axis=0)
     out /= np.abs(out).max()
     out = np.tanh(out * 1.6) / np.tanh(1.6)
-    fade_n = int((dur - T['fadeOut']) * SR)
+    fade_n = int((dur - E['fadeOut']) * SR)
     out[-fade_n:] *= np.linspace(1, 0, fade_n)[:, None] ** 1.5
-    out[: int(0.01 * SR)] *= np.linspace(0, 1, int(0.01 * SR))[:, None]
-    out *= 10 ** (-1 / 20) / np.abs(out).max()  # peak at -1 dBFS
+    out *= 10 ** (-1 / 20) / np.abs(out).max()
     return out
 
 
@@ -313,6 +408,6 @@ if __name__ == '__main__':
     cfg = json.load(open(sys.argv[1]))
     os.makedirs(sys.argv[2], exist_ok=True)
     for name in ('full', 'monogram'):
-        audio = build(cfg[name], cfg['bpm'], name == 'full')
+        audio = build(cfg, name)
         write_wav(os.path.join(sys.argv[2], f'{name}.wav'), audio)
         print(name, f'{len(audio) / SR:.2f}s')
