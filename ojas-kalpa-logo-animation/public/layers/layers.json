@@ -1,0 +1,326 @@
+{
+ "width": 1672,
+ "height": 941,
+ "head": {
+  "x": 340.08688340807174,
+  "y": 352.8856502242152
+ },
+ "emblemBase": {
+  "x": 340.08688340807174,
+  "y": 600.0
+ },
+ "layers": [
+  {
+   "name": "letter-K",
+   "kind": "letter",
+   "x": 1064,
+   "y": 343,
+   "w": 155,
+   "h": 153
+  },
+  {
+   "name": "letter-A2",
+   "kind": "letter",
+   "x": 1219,
+   "y": 368,
+   "w": 116,
+   "h": 128
+  },
+  {
+   "name": "figure-body",
+   "kind": "figure",
+   "x": 262,
+   "y": 316,
+   "w": 155,
+   "h": 267
+  },
+  {
+   "name": "figure-head",
+   "kind": "figure",
+   "x": 312,
+   "y": 326,
+   "w": 58,
+   "h": 54
+  },
+  {
+   "name": "flourish-bud",
+   "kind": "flourish",
+   "x": 1064,
+   "y": 624,
+   "w": 57,
+   "h": 49
+  },
+  {
+   "name": "flourish-left",
+   "kind": "flourish",
+   "x": 707,
+   "y": 636,
+   "w": 387,
+   "h": 84
+  },
+  {
+   "name": "flourish-right",
+   "kind": "flourish",
+   "x": 1093,
+   "y": 636,
+   "w": 400,
+   "h": 72
+  },
+  {
+   "name": "leaf-left-lower",
+   "kind": "leaf",
+   "x": 144,
+   "y": 503,
+   "w": 193,
+   "h": 81
+  },
+  {
+   "name": "leaf-left-outer",
+   "kind": "leaf",
+   "x": 96,
+   "y": 392,
+   "w": 146,
+   "h": 124
+  },
+  {
+   "name": "leaf-left-upper",
+   "kind": "leaf",
+   "x": 150,
+   "y": 340,
+   "w": 159,
+   "h": 204
+  },
+  {
+   "name": "leaf-right-lower",
+   "kind": "leaf",
+   "x": 340,
+   "y": 501,
+   "w": 191,
+   "h": 83
+  },
+  {
+   "name": "leaf-right-outer",
+   "kind": "leaf",
+   "x": 437,
+   "y": 393,
+   "w": 144,
+   "h": 123
+  },
+  {
+   "name": "leaf-right-upper",
+   "kind": "leaf",
+   "x": 368,
+   "y": 343,
+   "w": 160,
+   "h": 201
+  },
+  {
+   "name": "letter-A1",
+   "kind": "letter",
+   "x": 824,
+   "y": 372,
+   "w": 124,
+   "h": 124
+  },
+  {
+   "name": "letter-A3",
+   "kind": "letter",
+   "x": 1491,
+   "y": 372,
+   "w": 125,
+   "h": 124
+  },
+  {
+   "name": "letter-J",
+   "kind": "letter",
+   "x": 760,
+   "y": 372,
+   "w": 73,
+   "h": 158
+  },
+  {
+   "name": "letter-L",
+   "kind": "letter",
+   "x": 1335,
+   "y": 372,
+   "w": 87,
+   "h": 124
+  },
+  {
+   "name": "letter-O",
+   "kind": "letter",
+   "x": 596,
+   "y": 336,
+   "w": 170,
+   "h": 165
+  },
+  {
+   "name": "letter-P",
+   "kind": "letter",
+   "x": 1424,
+   "y": 372,
+   "w": 92,
+   "h": 123
+  },
+  {
+   "name": "letter-S",
+   "kind": "letter",
+   "x": 945,
+   "y": 369,
+   "w": 80,
+   "h": 129
+  },
+  {
+   "name": "ornament-left",
+   "kind": "ornament",
+   "x": 631,
+   "y": 548,
+   "w": 161,
+   "h": 45
+  },
+  {
+   "name": "ornament-right",
+   "kind": "ornament",
+   "x": 1424,
+   "y": 549,
+   "w": 153,
+   "h": 44
+  },
+  {
+   "name": "ray-00",
+   "kind": "ray",
+   "x": 176,
+   "y": 333,
+   "w": 68,
+   "h": 27
+  },
+  {
+   "name": "ray-01",
+   "kind": "ray",
+   "x": 191,
+   "y": 293,
+   "w": 64,
+   "h": 43
+  },
+  {
+   "name": "ray-02",
+   "kind": "ray",
+   "x": 216,
+   "y": 255,
+   "w": 57,
+   "h": 56
+  },
+  {
+   "name": "ray-03",
+   "kind": "ray",
+   "x": 253,
+   "y": 225,
+   "w": 44,
+   "h": 70
+  },
+  {
+   "name": "ray-04",
+   "kind": "ray",
+   "x": 296,
+   "y": 207,
+   "w": 32,
+   "h": 74
+  },
+  {
+   "name": "ray-05",
+   "kind": "ray",
+   "x": 334,
+   "y": 187,
+   "w": 22,
+   "h": 91
+  },
+  {
+   "name": "ray-06",
+   "kind": "ray",
+   "x": 360,
+   "y": 208,
+   "w": 36,
+   "h": 75
+  },
+  {
+   "name": "ray-07",
+   "kind": "ray",
+   "x": 386,
+   "y": 229,
+   "w": 50,
+   "h": 67
+  },
+  {
+   "name": "ray-08",
+   "kind": "ray",
+   "x": 411,
+   "y": 257,
+   "w": 58,
+   "h": 54
+  },
+  {
+   "name": "ray-09",
+   "kind": "ray",
+   "x": 424,
+   "y": 295,
+   "w": 69,
+   "h": 41
+  },
+  {
+   "name": "ray-10",
+   "kind": "ray",
+   "x": 439,
+   "y": 335,
+   "w": 65,
+   "h": 25
+  },
+  {
+   "name": "swirl-left",
+   "kind": "swirl",
+   "x": 69,
+   "y": 514,
+   "w": 271,
+   "h": 125
+  },
+  {
+   "name": "swirl-right",
+   "kind": "swirl",
+   "x": 339,
+   "y": 504,
+   "w": 265,
+   "h": 136
+  },
+  {
+   "name": "tagline-word1",
+   "kind": "tagline",
+   "x": 802,
+   "y": 524,
+   "w": 245,
+   "h": 81
+  },
+  {
+   "name": "tagline-word2",
+   "kind": "tagline",
+   "x": 1072,
+   "y": 524,
+   "w": 352,
+   "h": 101
+  },
+  {
+   "name": "master-full",
+   "kind": "master",
+   "x": 69,
+   "y": 187,
+   "w": 1547,
+   "h": 533
+  },
+  {
+   "name": "master-emblem",
+   "kind": "master",
+   "x": 69,
+   "y": 187,
+   "w": 535,
+   "h": 453
+  }
+ ]
+}

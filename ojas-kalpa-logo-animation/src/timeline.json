@@ -1,0 +1,36 @@
+{
+  "fps": 30,
+  "bpm": 120,
+  "full": {
+    "duration": 7.0,
+    "seed": 0.25,
+    "leaves": [0.5, 0.75, 1.0],
+    "swirls": 0.75,
+    "figure": 1.0,
+    "head": 1.5,
+    "rays": 1.5,
+    "rayStep": 0.06,
+    "letters": 2.0,
+    "letterStep": 0.07,
+    "tagline": 3.0,
+    "flourish": 3.5,
+    "hit": 4.0,
+    "grooveStart": 2.0,
+    "grooveEnd": 5.0,
+    "fadeOut": 6.4
+  },
+  "monogram": {
+    "duration": 4.5,
+    "seed": 0.15,
+    "leaves": [0.35, 0.55, 0.75],
+    "swirls": 0.55,
+    "figure": 0.75,
+    "head": 1.25,
+    "rays": 1.25,
+    "rayStep": 0.05,
+    "hit": 2.0,
+    "grooveStart": 1.0,
+    "grooveEnd": 3.0,
+    "fadeOut": 3.9
+  }
+}
